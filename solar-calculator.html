@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Savings Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sun: #F5A623;
+    --sun-light: #FFD580;
+    --sky: #0A1628;
+    --sky-mid: #0E2040;
+    --sky-light: #162B52;
+    --text: #E8EDF5;
+    --text-muted: #7A8FA8;
+    --elec: #4FC3F7;
+    --elec-dim: #1A4A6B;
+    --solar: #81C784;
+    --solar-dim: #1B4021;
+    --loan: #FFB74D;
+    --loan-dim: #4A2E00;
+    --border: rgba(255,255,255,0.07);
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--sky);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  /* Sunburst background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, rgba(245,166,35,0.04) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    overflow: visible;
+    padding-bottom: 8px;
+  }
+
+  .sun-icon {
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 12px;
+    display: block;
+    animation: pulse 4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(245,166,35,0.4)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(245,166,35,0.8)); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(20px, 3vw, 36px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #fff;
+    line-height: 1.5;
+    display: block;
+    overflow: visible;
+    white-space: nowrap;
+  }
+
+  h1 span { color: var(--sun); }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .assumptions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    background: rgba(245,166,35,0.08);
+    border: 1px solid rgba(245,166,35,0.2);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .assumptions strong { color: var(--sun); }
+
+  .assumptions-label {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--sun);
+    background: rgba(245,166,35,0.15);
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .offset-explainer {
+    max-width: 700px;
+    margin: 20px auto 0;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--sun);
+    border-radius: 8px;
+    padding: 20px 24px;
+    text-align: left;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .offset-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .offset-explainer p { margin-bottom: 10px; }
+  .offset-explainer p:last-child { margin-bottom: 0; }
+
+  .offset-explainer strong { color: var(--text); }
+  .offset-explainer em { color: var(--sun-light); font-style: normal; }
+
+  .offset-explainer ul {
+    margin: 8px 0 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .offset-explainer li { padding-left: 4px; }
+
+  .offset-note {
+    background: rgba(245,166,35,0.07);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border: 1px solid rgba(245,166,35,0.12);
+  }
+
+  .offset-note strong { color: var(--sun); }
+
+  /* Info tooltip */
+  .info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(245,166,35,0.2);
+    border: 1px solid rgba(245,166,35,0.4);
+    color: var(--sun);
+    font-size: 9px;
+    font-weight: 700;
+    cursor: help;
+    position: relative;
+    vertical-align: middle;
+    margin-left: 4px;
+    font-style: normal;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .info-icon .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--sky-light);
+    border: 1px solid rgba(245,166,35,0.25);
+    border-radius: 10px;
+    padding: 14px 16px;
+    width: 280px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    pointer-events: none;
+  }
+
+  .info-icon .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(245,166,35,0.25);
+  }
+
+  .info-icon .tooltip strong { color: var(--sun); font-size: 11px; }
+  .info-icon .tooltip b { color: var(--text); }
+  .info-icon .tooltip .tip-row { display: block; }
+
+  .info-icon:hover .tooltip,
+  .info-icon:focus .tooltip { display: block; }
+
+  /* Inputs Panel */
+  .inputs-panel {
+    background: var(--sky-mid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .prefix {
+    position: absolute;
+    left: 12px;
+    color: var(--sun);
+    font-size: 14px;
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .suffix {
+    position: absolute;
+    right: 12px;
+    color: var(--text-muted);
+    font-size: 12px;
+    pointer-events: none;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--sky-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    padding: 10px 12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+    outline: none;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .has-prefix input { padding-left: 28px; }
+  .has-suffix input { padding-right: 32px; }
+
+  input[type="number"]:focus {
+    border-color: var(--sun);
+    box-shadow: 0 0 0 3px rgba(245,166,35,0.15);
+  }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  @media (max-width: 640px) {
+    .summary-grid { grid-template-columns: 1fr; }
+  }
+
+  .summary-card {
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    border: 1px solid var(--border);
+  }
+
+  .summary-card.elec { background: var(--elec-dim); border-color: rgba(79,195,247,0.2); }
+  .summary-card.solar { background: var(--solar-dim); border-color: rgba(129,199,132,0.2); }
+  .summary-card.loan { background: var(--loan-dim); border-color: rgba(255,183,77,0.2); }
+
+  .card-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .elec .card-label { color: var(--elec); }
+  .solar .card-label { color: var(--solar); }
+  .loan .card-label { color: var(--loan); }
+
+  .card-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .card-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Table */
+  .table-wrap {
+    background: var(--sky-mid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .table-header {
+    display: grid;
+    grid-template-columns: 60px 1fr 1fr 1fr 1fr 1fr;
+    padding: 14px 24px;
+    background: var(--sky-light);
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .table-body {
+    max-height: 600px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .table-body::-webkit-scrollbar { width: 6px; }
+  .table-body::-webkit-scrollbar-track { background: transparent; }
+  .table-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .table-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 1fr 1fr 1fr 1fr;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    align-items: center;
+    transition: background 0.15s;
+  }
+
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: rgba(255,255,255,0.03); }
+
+  .table-row.loan-active { background: rgba(255,183,77,0.04); }
+  .table-row.loan-done { background: rgba(129,199,132,0.04); }
+
+  .year-cell {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .elec-cell { color: var(--elec); }
+  .inflation-cell { color: #90CAF9; }
+  .loan-cell { color: var(--loan); }
+  .combined-cell { color: #CE93D8; }
+  .net-cell { font-weight: 500; }
+  .net-cell.positive { color: var(--solar); }
+  .net-cell.negative { color: #EF9A9A; }
+
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+
+  .badge-utility { background: rgba(79,195,247,0.15); color: var(--elec); }
+  .badge-combined { background: rgba(206,147,216,0.15); color: #CE93D8; }
+  .badge-loan-payment { background: rgba(255,183,77,0.15); color: var(--loan); }
+  .badge-savings { background: rgba(129,199,132,0.2); color: var(--solar); }
+  .badge-negative { background: rgba(239,154,154,0.2); color: #EF9A9A; }
+
+  /* Diff toggle */
+  .diff-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    background: var(--sky);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .diff-toggle button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .diff-toggle button.active {
+    background: var(--sun);
+    color: var(--sky);
+    font-weight: 500;
+  }
+
+  .diff-toggle button:not(.active):hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+  }
+
+  /* Column visibility toggles */
+  .col-toggles {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .col-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--sky-mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .col-toggle-btn.on { border-color: var(--elec); color: var(--elec); background: rgba(79,195,247,0.08); }
+  .col-toggle-btn.on.col-b-btn { border-color: #90CAF9; color: #90CAF9; background: rgba(144,202,249,0.08); }
+  .col-toggle-btn:hover { opacity: 0.8; }
+  .col-toggle-btn .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; transition: opacity 0.15s; }
+  .col-toggle-btn.on .dot { opacity: 1; }
+
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    border: 1px solid;
+  }
+
+  .reset-btn {
+    background: rgba(239,154,154,0.08);
+    border-color: rgba(239,154,154,0.25);
+    color: #EF9A9A;
+  }
+  .reset-btn:hover { background: rgba(239,154,154,0.18); }
+
+  .print-btn {
+    background: rgba(245,166,35,0.1);
+    border-color: rgba(245,166,35,0.35);
+    color: var(--sun);
+  }
+  .print-btn:hover { background: rgba(245,166,35,0.2); }
+
+  @media print {
+    body { background: #fff !important; color: #111 !important; }
+    body::before { display: none; }
+    .col-toggles, .action-btn, .diff-toggle, .info-icon,
+    #celebModal, #floatingTooltip { display: none !important; }
+    .container { padding: 20px !important; }
+    .table-body { max-height: none !important; overflow: visible !important; }
+    .table-wrap { overflow: visible !important; }
+    .inputs-panel { background: #f5f5f5 !important; border-color: #ddd !important; }
+    .summary-card { background: #f5f5f5 !important; border-color: #ddd !important; }
+    .summary-card .card-value { color: #111 !important; }
+    .summary-card .card-label, .summary-card .card-sub { color: #555 !important; }
+    .table-header { background: #eee !important; color: #333 !important; }
+    .table-row { border-color: #ddd !important; background: #fff !important; }
+    .totals-row { background: #f0f0f0 !important; }
+    .table-header, .table-row, .totals-row { min-width: unset !important; }
+    h1, h1 span { color: #111 !important; filter: none !important; }
+    .subtitle, .card-sub { color: #555 !important; }
+    label { color: #555 !important; }
+    input { background: #fff !important; border-color: #ccc !important; color: #111 !important; }
+    .warranty-line { background: #fff8e6 !important; }
+    .breakeven-line { background: #f0fff0 !important; }
+    .loanpaid-line { background: #e8f4fb !important; }
+    .net-cell.positive { color: #2e7d32 !important; }
+    .net-cell.negative { color: #c62828 !important; }
+    .elec-cell { color: #0277bd !important; }
+    .loan-cell { color: #e65100 !important; }
+    .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .sun-icon { display: none; }
+    .offset-explainer { border-color: #ddd !important; background: #fafafa !important; }
+    @page { margin: 1.5cm; }
+  }
+
+  /* Warranty divider */
+  .warranty-divider {
+    padding: 0 24px;
+  }
+
+  .warranty-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 2px dashed rgba(245,166,35,0.5);
+    border-bottom: 2px dashed rgba(245,166,35,0.5);
+    margin: 2px 0;
+    background: rgba(245,166,35,0.05);
+  }
+
+  .warranty-line::before,
+  .warranty-line::after {
+    content: '';
+    flex: 1;
+    height: 0;
+  }
+
+  .warranty-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--sun);
+    text-align: center;
+    padding: 4px 16px;
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.3);
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .breakeven-line {
+    border-top-color: rgba(129,199,132,0.5);
+    border-bottom-color: rgba(129,199,132,0.5);
+    background: rgba(129,199,132,0.05);
+  }
+
+  .breakeven-label {
+    color: var(--solar);
+    background: rgba(129,199,132,0.1);
+    border-color: rgba(129,199,132,0.3);
+  }
+
+  .loanpaid-line {
+    border-top-color: rgba(79,195,247,0.5);
+    border-bottom-color: rgba(79,195,247,0.5);
+    background: rgba(79,195,247,0.05);
+  }
+
+  .loanpaid-label {
+    color: var(--elec);
+    background: rgba(79,195,247,0.1);
+    border-color: rgba(79,195,247,0.3);
+  }
+
+  /* Totals row */
+  .totals-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 1fr 1fr 1fr 1fr;
+    padding: 16px 24px;
+    background: var(--sky-light);
+    border-top: 2px solid var(--border);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .totals-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  @media (max-width: 768px) {
+    .container { padding: 24px 12px 60px; }
+    .inputs-panel { padding: 16px; gap: 16px; }
+    h1 { white-space: normal; font-size: clamp(22px, 6vw, 36px); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-header, .table-row, .totals-row {
+      min-width: 480px;
+      padding: 10px 14px;
+      font-size: 11px;
+    }
+    .assumptions { font-size: 11px; padding: 8px 12px; flex-wrap: wrap; }
+    .col-toggles { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div style="padding: 10px 0 20px; overflow:visible;"><h1>Solar <span>Savings</span> Calculator</h1></div>
+    <span class="sun-icon">☀️</span>
+    <p class="subtitle">30-year cost comparison · electricity vs. solar investment</p>
+    <div class="assumptions">
+      <span class="assumptions-label">Assumptions</span>
+      Solar system is sized for a <strong id="offsetDisplay">100%</strong> energy offset — the calculations below assume your solar system offsets this percentage of your electricity consumption.
+    </div>
+    <div class="offset-explainer">
+      <div class="offset-title">📋 What does "100% Offset" mean?</div>
+      <p>In Alberta (2026), your electricity bill is made up of more than just the energy you consume. A <strong>100% offset</strong> means your solar system is sized to generate enough electricity over the course of a year to cover your <em>total</em> bill — including:</p>
+      <ul>
+        <li><strong>Energy charges</strong> — the actual cost of electricity consumed (regulated or market rate)</li>
+        <li><strong>Transmission charges</strong> — fees for moving power across Alberta's high-voltage grid</li>
+        <li><strong>Distribution charges</strong> — costs for delivering power through local lines to your home</li>
+        <li><strong>Administration & rider fees</strong> — fixed monthly fees, rate rider adjustments, and other utility charges</li>
+      </ul>
+      <p class="offset-note">Under Alberta's <strong>Micro-Generation Regulation</strong>, excess solar energy exported to the grid earns credits that offset these costs, effectively reducing your net bill to zero across a 12-month period when properly sized.</p>
+    </div>
+  </header>
+
+  <div class="inputs-panel">
+    <div class="input-group">
+      <label>Monthly Electric Bill</label>
+      <div class="input-wrap has-prefix">
+        <span class="prefix">$</span>
+        <input type="number" inputmode="decimal" id="monthlyBill" value="300" min="0" step="1">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Inflation Rate <span class="info-icon" tabindex="0">?<span class="tooltip">
+        <strong>Choosing an inflation rate:</strong>
+        <br><br>
+        <span class="tip-row">🟢 <b>Conservative — 2%</b><br>Near Bank of Canada's 2% target. Assumes electricity costs rise modestly in line with general inflation.</span>
+        <br><br>
+        <span class="tip-row">🟡 <b>Moderate — 3–4%</b><br>Energy costs typically outpace general CPI. Accounts for grid upgrades, transmission increases, and carbon pricing in Alberta.</span>
+        <br><br>
+        <span class="tip-row">🔴 <b>Realistic / Historical — 5%</b><br>Reflects Alberta's deregulated electricity market volatility and long-term infrastructure cost trends.</span>
+      </span></span></label>
+      <div class="input-wrap has-suffix">
+        <input type="number" inputmode="decimal" id="inflationRate" value="2" min="0" max="20" step="0.1">
+        <span class="suffix">%</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Solar Install Cost</label>
+      <div class="input-wrap has-prefix">
+        <span class="prefix">$</span>
+        <input type="number" inputmode="decimal" id="installCost" value="29000" min="0" step="500">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Loan Length</label>
+      <div class="input-wrap has-suffix">
+        <input type="number" inputmode="numeric" id="loanYears" value="15" min="1" max="30" step="1">
+        <span class="suffix">yr</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Loan Interest Rate</label>
+      <div class="input-wrap has-suffix">
+        <input type="number" inputmode="decimal" id="interestRate" value="6.5" min="0" max="30" step="0.1">
+        <span class="suffix">%</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Solar Offset <span class="info-icon" tabindex="0">?<span class="tooltip">
+        <strong>Solar Offset:</strong>
+        <br><br>
+        <span class="tip-row">The percentage of your electricity bill your solar system covers. <b>100%</b> means solar fully offsets your bill.</span>
+        <br><br>
+        <span class="tip-row">🟢 <b>100%</b> — System sized to fully cover your usage.</span>
+        <br><br>
+        <span class="tip-row">🟡 <b>80%</b> — You still pay ~20% of your bill to the utility.</span>
+        <br><br>
+        <span class="tip-row">🔴 <b>Below 50%</b> — Partial offset; savings may not outweigh loan costs.</span>
+      </span></span></label>
+      <div class="input-wrap has-suffix">
+        <input type="number" inputmode="decimal" id="solarOffset" value="100" min="1" max="100" step="1">
+        <span class="suffix">%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card elec">
+      <div class="card-label">30-yr Elec (Flat)</div>
+      <div class="card-value" id="sum-flat">—</div>
+      <div class="card-sub">No inflation applied</div>
+    </div>
+    <div class="summary-card solar">
+      <div class="card-label">30-yr Elec (Inflated)</div>
+      <div class="card-value" id="sum-inflated">—</div>
+      <div class="card-sub">With annual rate increases and inflation</div>
+    </div>
+    <div class="summary-card loan">
+      <div class="card-label">Total Solar Cost</div>
+      <div class="card-value" id="sum-solar">—</div>
+      <div class="card-sub">Loan payments over term</div>
+    </div>
+  </div>
+
+  <div class="col-toggles">
+    <span>Show columns:</span>
+    <button class="col-toggle-btn on" id="toggleA" onclick="toggleCol('A')" data-tooltip="toggleA"><span class="dot"></span>A · Flat Elec</button>
+    <button class="col-toggle-btn on col-b-btn" id="toggleB" onclick="toggleCol('B')" data-tooltip="toggleB"><span class="dot"></span>B · Inflated Elec</button>
+    <span style="margin-left:12px; color:var(--text-muted);">Break-even:</span>
+    <span class="diff-toggle" style="vertical-align:middle;">
+      <button id="btnBE1" class="active" onclick="setBreakEvenMode('cashflow')" data-tooltip="beCashflow">Cash Flow</button>
+      <button id="btnBE2" onclick="setBreakEvenMode('payback')" data-tooltip="bePayback">Investment</button>
+    </span>
+    <span class="info-icon info-icon-js" tabindex="0" data-tooltip="breakeven" style="margin-left:4px;">?</span>
+    <span style="flex:1;"></span>
+    <button class="action-btn reset-btn" onclick="resetDefaults()" data-tooltip="resetBtn">↺ Reset</button>
+    <button class="action-btn print-btn" onclick="exportPDF()" data-tooltip="printBtn">⬇ Export PDF</button>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <div>Year</div>
+      <div class="col-a" id="hdrA">A · Flat Elec</div>
+      <div class="col-b" id="hdrB">B · Inflated Elec</div>
+      <div>C · Solar Loan</div>
+      <div>D · Combined Cost <span class="info-icon info-icon-js" tabindex="0" data-tooltip="combined">?</span></div>
+      <div><span id="diffLabel">A vs C · Diff</span><span class="diff-toggle"><button id="btnFlat" class="active" onclick="setDiffMode('flat')" data-tooltip="diffFlat">Flat Elec</button><button id="btnInflated" onclick="setDiffMode('inflated')" data-tooltip="diffInflated">Inflated Elec</button></span></div>
+    </div>
+    <div class="table-body" id="tableBody"></div>
+    <div class="totals-row" id="totalsRow"></div>
+  </div>
+
+  <div style="
+    margin-top: 48px;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: 3px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 20px 24px;
+    background: rgba(255,255,255,0.02);
+    font-size: 11px;
+    color: #4A5E74;
+    line-height: 1.7;
+  ">
+    <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #4A5E74; margin-bottom: 10px;">⚠ Disclaimer</div>
+    All figures, projections, and calculations presented in this tool are <strong style="color:#5A7090;">estimates only</strong> and are provided for <strong style="color:#5A7090;">general planning and informational purposes</strong>. They do not constitute financial, legal, or professional advice. Real-world results will vary based on factors including but not limited to: actual electricity consumption, utility rate changes, local solar irradiance and weather conditions, system performance degradation, installation costs, financing terms, applicable taxes and rebates, regulatory changes, and equipment maintenance. Past energy pricing trends are not a guarantee of future rates. Always consult a qualified solar installer, financial advisor, and your local utility provider before making any purchasing or investment decisions.
+  </div>
+</div>
+
+<script>
+  const fmt = v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  let diffMode = 'flat';
+  let showA = true, showB = true;
+  let breakEvenMode = 'cashflow';
+
+  function setBreakEvenMode(mode) {
+    breakEvenMode = mode;
+    document.getElementById('btnBE1').classList.toggle('active', mode === 'cashflow');
+    document.getElementById('btnBE2').classList.toggle('active', mode === 'payback');
+    calculate();
+  }
+
+  function resetDefaults() {
+    document.getElementById('monthlyBill').value   = 300;
+    document.getElementById('inflationRate').value = 2;
+    document.getElementById('installCost').value   = 29000;
+    document.getElementById('loanYears').value     = 15;
+    document.getElementById('interestRate').value  = 6.5;
+    document.getElementById('solarOffset').value   = 100;
+    diffMode = 'flat';
+    breakEvenMode = 'cashflow';
+    showA = true; showB = true;
+    document.getElementById('toggleA').classList.add('on');
+    document.getElementById('toggleB').classList.add('on');
+    document.getElementById('btnFlat').classList.add('active');
+    document.getElementById('btnInflated').classList.remove('active');
+    document.getElementById('btnBE1').classList.add('active');
+    document.getElementById('btnBE2').classList.remove('active');
+    document.getElementById('btnFlat').disabled = false;
+    document.getElementById('btnInflated').disabled = false;
+    document.getElementById('btnFlat').style.opacity = '1';
+    document.getElementById('btnInflated').style.opacity = '1';
+    document.getElementById('btnFlat').style.cursor = 'pointer';
+    document.getElementById('btnInflated').style.cursor = 'pointer';
+    calculate();
+  }
+
+  function exportPDF() {
+    window.print();
+  }
+
+  function toggleCol(col) {
+    if (col === 'A') {
+      if (showA && !showB) return;
+      showA = !showA;
+      document.getElementById('toggleA').classList.toggle('on', showA);
+      // If A is hidden, force diff to inflated; if A is shown and B hidden, force diff to flat
+      if (!showA) setDiffMode('inflated');
+      else if (!showB) setDiffMode('flat');
+    } else {
+      if (showB && !showA) return;
+      showB = !showB;
+      document.getElementById('toggleB').classList.toggle('on', showB);
+      // If B is hidden, force diff to flat; if B is shown and A hidden, force diff to inflated
+      if (!showB) setDiffMode('flat');
+      else if (!showA) setDiffMode('inflated');
+    }
+    // Lock/unlock diff toggle buttons based on visibility
+    const btnFlat = document.getElementById('btnFlat');
+    const btnInflated = document.getElementById('btnInflated');
+    btnFlat.disabled = !showA;
+    btnInflated.disabled = !showB;
+    btnFlat.style.opacity = showA ? '1' : '0.35';
+    btnInflated.style.opacity = showB ? '1' : '0.35';
+    btnFlat.style.cursor = showA ? 'pointer' : 'not-allowed';
+    btnInflated.style.cursor = showB ? 'pointer' : 'not-allowed';
+    updateGridCols();
+    calculate();
+  }
+
+  function updateGridCols() {
+    const cols = ['60px', showA ? '1fr' : null, showB ? '1fr' : null, '1fr', '1fr', '1fr'].filter(Boolean).join(' ');
+    document.querySelectorAll('.table-header, .table-row, .totals-row').forEach(el => {
+      el.style.gridTemplateColumns = cols;
+    });
+    document.getElementById('hdrA').style.display = showA ? '' : 'none';
+    document.getElementById('hdrB').style.display = showB ? '' : 'none';
+    window._gridCols = cols;
+  }
+
+  function setDiffMode(mode) {
+    diffMode = mode;
+    document.getElementById('btnFlat').classList.toggle('active', mode === 'flat');
+    document.getElementById('btnInflated').classList.toggle('active', mode === 'inflated');
+    document.getElementById('diffLabel').textContent = mode === 'flat' ? 'A vs C · Diff' : 'B vs C · Diff';
+    calculate();
+  }
+
+  function calcAnnualPayment(principal, annualRate, years) {
+    if (annualRate === 0) return principal / years;
+    const r = annualRate / 100 / 12;
+    const n = years * 12;
+    const monthly = principal * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    return monthly * 12;
+  }
+
+  function calculate() {
+    const monthly = parseFloat(document.getElementById('monthlyBill').value) || 0;
+    const inflation = parseFloat(document.getElementById('inflationRate').value) || 0;
+    const install = parseFloat(document.getElementById('installCost').value) || 0;
+    const loanYrs = parseInt(document.getElementById('loanYears').value) || 15;
+    const interest = parseFloat(document.getElementById('interestRate').value) || 0;
+
+    const offset = (parseFloat(document.getElementById('solarOffset').value) || 100) / 100;
+    document.getElementById('offsetDisplay').textContent = Math.round(offset * 100) + '%';
+    const baseYearly = monthly * 12;
+    const annualLoan = calcAnnualPayment(install, interest, loanYrs);
+
+    const body = document.getElementById('tableBody');
+    body.innerHTML = '';
+
+    // Pre-pass: find break-even year based on selected mode
+    let breakEvenYear = null;
+    let preInflated = baseYearly;
+
+    if (breakEvenMode === 'cashflow') {
+      // Mode 1: when cumulative annual diff (savings - loan) first >= 0
+      let cumulativeDiff = 0;
+      for (let yr = 1; yr <= 30; yr++) {
+        if (yr > 1) preInflated = preInflated * (1 + inflation / 100);
+        const preLoanCost = yr <= loanYrs ? annualLoan : 0;
+        const preBase = diffMode === 'flat' ? baseYearly : preInflated;
+        cumulativeDiff += (preBase * offset) - preLoanCost;
+        if (breakEvenYear === null && cumulativeDiff >= 0) breakEvenYear = yr;
+      }
+    } else {
+      // Mode 2: when cumulative electricity savings cover the install cost
+      let cumulativeSavings = 0;
+      for (let yr = 1; yr <= 30; yr++) {
+        if (yr > 1) preInflated = preInflated * (1 + inflation / 100);
+        const preBase = diffMode === 'flat' ? baseYearly : preInflated;
+        cumulativeSavings += preBase * offset;
+        if (breakEvenYear === null && cumulativeSavings >= install) breakEvenYear = yr;
+      }
+    }
+
+    let totalFlat = 0, totalInflated = 0, totalLoan = 0, totalCombined = 0;
+    let inflatedCost = baseYearly;
+
+    for (let yr = 1; yr <= 30; yr++) {
+      if (yr > 1) inflatedCost = inflatedCost * (1 + inflation / 100);
+      const flatCost = baseYearly;
+      const loanCost = yr <= loanYrs ? annualLoan : 0;
+
+      // Diff = electricity saved by solar (offset %) minus loan cost
+      const baseCost = diffMode === 'flat' ? flatCost : inflatedCost;
+      const electricitySaved = baseCost * offset;
+      const diff = electricitySaved - loanCost;
+
+      // Combined = utility portion still owed + loan payment
+      const utilityRemaining = baseCost * (1 - offset);
+      const combinedCost = utilityRemaining + loanCost;
+
+      totalFlat += flatCost;
+      totalInflated += inflatedCost;
+      totalLoan += loanCost;
+      totalCombined += combinedCost;
+
+      const row = document.createElement('div');
+      const isLoanActive = yr <= loanYrs;
+      row.className = 'table-row ' + (isLoanActive ? 'loan-active' : 'loan-done');
+
+      const badge = isLoanActive
+        ? `<span class="badge badge-loan-payment">Loan Payment</span>`
+        : `<span class="badge badge-paid">PAID OFF</span>`;
+
+      // positive diff = chosen elec costs more = saving with solar
+      const diffClass = diff >= 0 ? 'positive' : 'negative';
+      const diffSign = diff >= 0 ? '-' : '+';
+      const postLoanSavings = (diffMode === 'flat' ? flatCost : inflatedCost) * offset;
+
+      const combinedClass = combinedCost <= baseCost ? 'positive' : 'negative';
+      const combinedSign = combinedCost <= baseCost ? '-' : '+';
+      const combinedVsBase = Math.abs(baseCost - combinedCost);
+
+      row.innerHTML = `
+        <div class="year-cell">${yr}</div>
+        ${showA ? `<div class="elec-cell col-a">${fmt(flatCost)} <span class="badge badge-utility">Utility Cost</span></div>` : ''}
+        ${showB ? `<div class="inflation-cell col-b">${fmt(inflatedCost)} <span class="badge badge-utility">Inflated Util Cost</span></div>` : ''}
+        <div class="loan-cell">${isLoanActive ? fmt(loanCost) : '—'}${badge}</div>
+        <div class="net-cell ${combinedClass}">${fmt(combinedCost)} <span class="badge ${combinedClass === 'positive' ? 'badge-savings' : 'badge-negative'}">New Payment</span></div>
+        <div class="net-cell diff-cell ${isLoanActive ? diffClass : 'positive'}">${isLoanActive ? diffSign + fmt(Math.abs(diff)) + (diff >= 0 ? ' <span class="badge badge-savings">Savings</span>' : '') : fmt(postLoanSavings) + ' <span class="badge badge-savings">Savings</span>'}</div>
+      `;
+      body.appendChild(row);
+
+      if (breakEvenYear !== null && yr === breakEvenYear) {
+        const beDiv = document.createElement('div');
+        beDiv.className = 'warranty-divider';
+        const beLabel = breakEvenMode === 'cashflow' ? 'Cash Flow Break-Even' : 'Investment Payback';
+        beDiv.innerHTML = `<div class="warranty-line breakeven-line" data-celebrate="breakeven" data-year="${breakEvenYear}" data-mode="${beLabel}" style="cursor:pointer;"><span class="warranty-label breakeven-label">💰 ${beLabel} — Year ${breakEvenYear}</span></div>`;
+        body.appendChild(beDiv);
+      }
+
+      if (yr === loanYrs) {
+        const loanDiv = document.createElement('div');
+        loanDiv.className = 'warranty-divider';
+        loanDiv.innerHTML = `<div class="warranty-line loanpaid-line" data-celebrate="loanpaid" data-year="${loanYrs}" style="cursor:pointer;"><span class="warranty-label loanpaid-label">🎉 Loan Paid In Full — Year ${loanYrs}</span></div>`;
+        body.appendChild(loanDiv);
+      }
+
+      if (yr === 25) {
+        const divider = document.createElement('div');
+        divider.className = 'warranty-divider';
+        divider.innerHTML = `<div class="warranty-line"><span class="warranty-label">☀️ 25-Year Solar Panel Warranty Period Ends</span></div>`;
+        body.appendChild(divider);
+      }
+    }
+
+    document.getElementById('sum-flat').textContent = fmt(totalFlat);
+    document.getElementById('sum-inflated').textContent = fmt(totalInflated);
+    document.getElementById('sum-solar').textContent = fmt(totalLoan);
+
+    const totalBase = diffMode === 'flat' ? totalFlat : totalInflated;
+    const totalDiff = (totalBase * offset) - totalLoan;
+
+    const totals = document.getElementById('totalsRow');
+    const totalCombinedClass = totalCombined <= totalBase ? 'positive' : 'negative';
+    totals.innerHTML = `
+      <div class="totals-label">30-yr</div>
+      ${showA ? `<div class="elec-cell col-a">${fmt(totalFlat)}</div>` : ''}
+      ${showB ? `<div class="inflation-cell col-b">${fmt(totalInflated)}</div>` : ''}
+      <div class="loan-cell">${fmt(totalLoan)}</div>
+      <div class="net-cell ${totalCombinedClass}">${fmt(totalCombined)}</div>
+      <div class="net-cell ${totalDiff >= 0 ? 'positive' : 'negative'}">
+        ${totalDiff >= 0 ? '-' : '+'}${fmt(Math.abs(totalDiff))}${totalDiff >= 0 ? ' <span class="badge badge-savings">Savings</span>' : ''}
+      </div>
+    `;
+    updateGridCols();
+  }
+
+  document.querySelectorAll('input').forEach(el => {
+    el.addEventListener('input', calculate);
+    el.addEventListener('change', calculate);
+    el.addEventListener('keyup', calculate);
+    el.addEventListener('blur', calculate);
+  });
+  calculate();
+</script>
+<!-- Floating tooltip for clipped contexts -->
+<div id="floatingTooltip" style="
+  display:none;
+  position:fixed;
+  z-index:9999;
+  background:#162B52;
+  border:1px solid rgba(245,166,35,0.25);
+  border-radius:10px;
+  padding:14px 16px;
+  width:290px;
+  font-size:11px;
+  line-height:1.6;
+  color:#7A8FA8;
+  font-family:'DM Mono',monospace;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  pointer-events:none;
+  letter-spacing:0;
+  text-transform:none;
+  font-weight:400;
+"></div>
+
+<script>
+  const tooltipContents = {
+    combined: `<span style="color:#F5A623;font-size:11px;font-weight:700;">Combined Cost Formula:</span><br><br>
+<span style="display:block;color:#E8EDF5;"><b style="color:#E8EDF5;">Utility Remaining</b> + <b style="color:#E8EDF5;">Loan Payment</b></span><br>
+<span style="display:block;">Utility Remaining = Bill × 12 × (1 − Offset%)</span><br>
+<span style="display:block;">e.g. at <span style="color:#FFD580;">80% offset</span> you still owe 20% of your bill to the utility, plus the loan payment.</span><br>
+<span style="display:block;">After the loan is paid off, Combined Cost = Utility Remaining only.</span>`,
+
+    breakeven: `<span style="color:#F5A623;font-size:11px;font-weight:700;">Break-Even Modes:</span><br><br>
+<span style="display:block;color:#81C784;font-weight:700;">Cash Flow</span>
+<span style="display:block;margin-bottom:8px;">Tracks your running annual difference between electricity saved and loan payments. Break-even is the year your <b style="color:#E8EDF5;">cumulative net position</b> first turns positive — meaning solar has saved you more than it has cost you, year by year.</span>
+<span style="display:block;color:#81C784;font-weight:700;">Investment Payback</span>
+<span style="display:block;">Measures when your total cumulative electricity savings equal the <b style="color:#E8EDF5;">full install cost</b>. A traditional ROI payback period — ignoring loan structure and asking simply: has solar paid for itself yet?</span>`,
+
+    toggleA: `<span style="color:#F5A623;font-size:11px;font-weight:700;">Column A · Flat Electricity</span><br><br>
+<span style="display:block;">Shows your electricity bill each year with <b style="color:#E8EDF5;">no inflation applied</b> — a flat constant cost based on your current monthly bill.</span><br>
+<span style="display:block;">Toggle on or off to simplify the table view.</span>`,
+
+    toggleB: `<span style="color:#F5A623;font-size:11px;font-weight:700;">Column B · Inflated Electricity</span><br><br>
+<span style="display:block;">Shows your electricity bill each year with the <b style="color:#E8EDF5;">inflation rate applied</b>, compounding annually. Reflects the realistic rising cost of grid power over time.</span><br>
+<span style="display:block;">Toggle on or off to simplify the table view.</span>`,
+
+    beCashflow: `<span style="color:#81C784;font-size:11px;font-weight:700;">Break-Even: Cash Flow</span><br><br>
+<span style="display:block;">Tracks your <b style="color:#E8EDF5;">running net position</b> year by year: electricity saved minus loan payments, accumulated over time.</span><br>
+<span style="display:block;">The marker appears at the first year that cumulative total turns positive — meaning solar has saved you more than it has cost you.</span>`,
+
+    bePayback: `<span style="color:#81C784;font-size:11px;font-weight:700;">Break-Even: Investment Payback</span><br><br>
+<span style="display:block;">A traditional ROI measure: the year your <b style="color:#E8EDF5;">cumulative electricity savings</b> equal the full solar install cost.</span><br>
+<span style="display:block;">Ignores loan structure — simply asks: has solar paid for itself yet?</span>`,
+
+    diffFlat: `<span style="color:#F5A623;font-size:11px;font-weight:700;">Diff Mode: Flat Electricity</span><br><br>
+<span style="display:block;">Compares <b style="color:#E8EDF5;">Column A</b> (flat electricity cost) against Column C (solar loan) each year.</span><br>
+<span style="display:block;color:#81C784;">Green</span> = solar costs less than flat utility that year.<br>
+<span style="display:block;color:#EF9A9A;">Red</span> = solar loan costs more than your flat bill.`,
+
+    diffInflated: `<span style="color:#F5A623;font-size:11px;font-weight:700;">Diff Mode: Inflated Electricity</span><br><br>
+<span style="display:block;">Compares <b style="color:#E8EDF5;">Column B</b> (inflation-adjusted electricity) against Column C (solar loan) each year.</span><br>
+<span style="display:block;">Makes solar look increasingly favourable over time as utility costs rise while the loan payment stays fixed.</span>`,
+
+    resetBtn: `<span style="color:#EF9A9A;font-size:11px;font-weight:700;">Reset to Defaults</span><br><br>
+<span style="display:block;">Clears all inputs and toggles back to their original default values so you can start fresh.</span>`,
+
+    printBtn: `<span style="color:#F5A623;font-size:11px;font-weight:700;">Export to PDF</span><br><br>
+<span style="display:block;">Opens your browser's print dialog. Choose <b style="color:#E8EDF5;">"Save as PDF"</b> as the destination to save a clean copy of this projection.</span><br>
+<span style="display:block;">The calculator is formatted for print — UI controls and tooltips are hidden automatically.</span>`,
+  };
+
+  const floater = document.getElementById('floatingTooltip');
+
+  document.querySelectorAll('[data-tooltip]').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      const key = el.dataset.tooltip;
+      if (!tooltipContents[key]) return;
+      floater.innerHTML = tooltipContents[key];
+      floater.style.display = 'block';
+      positionFloater(el);
+    });
+    el.addEventListener('mousemove', () => positionFloater(el));
+    el.addEventListener('mouseleave', () => { floater.style.display = 'none'; });
+    el.addEventListener('focus', () => {
+      const key = el.dataset.tooltip;
+      if (!tooltipContents[key]) return;
+      floater.innerHTML = tooltipContents[key];
+      floater.style.display = 'block';
+      positionFloater(el);
+    });
+    el.addEventListener('blur', () => { floater.style.display = 'none'; });
+  });
+
+  function positionFloater(icon) {
+    const rect = icon.getBoundingClientRect();
+    const tw = 290;
+    let left = rect.left + rect.width / 2 - tw / 2;
+    let top = rect.top - floater.offsetHeight - 12;
+    // Keep within viewport horizontally
+    if (left < 8) left = 8;
+    if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+    // Flip below if not enough room above
+    if (top < 8) top = rect.bottom + 10;
+    floater.style.left = left + 'px';
+    floater.style.top = top + 'px';
+  }
+
+  // Event delegation for dynamically generated diff cells
+  document.getElementById('tableBody').addEventListener('mouseover', e => {
+    const cell = e.target.closest('.diff-cell');
+    if (!cell) return;
+    const isPositive = cell.classList.contains('positive');
+    floater.innerHTML = isPositive
+      ? `<span style="color:#81C784;font-size:11px;font-weight:700;">Saving Money ✓</span><br><br>
+         <span style="display:block;">The <b style="color:#E8EDF5;">negative value</b> shown in this column means solar is costing you <b style="color:#E8EDF5;">less</b> than your electricity bill would have been.</span><br>
+         <span style="display:block;">That difference is <b style="color:#81C784;">cash staying in your pocket</b> — money you would have paid to the utility that you no longer owe.</span>`
+      : `<span style="color:#EF9A9A;font-size:11px;font-weight:700;">Still Catching Up</span><br><br>
+         <span style="display:block;">The <b style="color:#E8EDF5;">positive value</b> means your solar loan payment is currently <b style="color:#E8EDF5;">higher</b> than what solar is saving you this year.</span><br>
+         <span style="display:block;">This is normal early in the loan term. Once cumulative savings exceed cumulative loan costs, you reach <b style="color:#81C784;">break-even</b>.</span>`;
+    floater.style.display = 'block';
+    positionFloater(cell);
+  });
+
+  document.getElementById('tableBody').addEventListener('mousemove', e => {
+    const cell = e.target.closest('.diff-cell');
+    if (!cell) return;
+    positionFloater(cell);
+  });
+
+  document.getElementById('tableBody').addEventListener('mouseleave', () => {
+    floater.style.display = 'none';
+  });
+
+  document.getElementById('tableBody').addEventListener('mouseout', e => {
+    if (!e.target.closest('.diff-cell')) floater.style.display = 'none';
+  });
+</script>
+<!-- Celebratory Modal -->
+<div id="celebModal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:10000;
+  background:rgba(10,22,40,0.85);
+  backdrop-filter:blur(6px);
+  align-items:center;
+  justify-content:center;
+">
+  <div id="celebContent" style="
+    position:relative;
+    background:linear-gradient(145deg,#0E2040,#162B52);
+    border-radius:20px;
+    padding:48px 40px 40px;
+    max-width:420px;
+    width:90%;
+    text-align:center;
+    border:1px solid rgba(255,255,255,0.1);
+    box-shadow:0 24px 80px rgba(0,0,0,0.6);
+    animation:popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+  ">
+    <canvas id="confettiCanvas" style="position:absolute;inset:0;width:100%;height:100%;border-radius:20px;pointer-events:none;"></canvas>
+    <div id="celebEmoji" style="font-size:56px;line-height:1;margin-bottom:16px;"></div>
+    <div id="celebTitle" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;margin-bottom:10px;"></div>
+    <div id="celebSubtitle" style="font-size:12px;color:#7A8FA8;line-height:1.7;margin-bottom:24px;"></div>
+    <div id="celebStat" style="
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px;
+      padding:16px 20px;
+      font-size:12px;
+      color:#7A8FA8;
+      line-height:1.8;
+      margin-bottom:28px;
+      text-align:left;
+    "></div>
+    <button onclick="closeCelebModal()" style="
+      background:var(--sun);
+      color:#0A1628;
+      border:none;
+      border-radius:10px;
+      padding:12px 32px;
+      font-family:'Syne',sans-serif;
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+      letter-spacing:0.5px;
+      transition:opacity 0.2s;
+    " onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Awesome! 🎉</button>
+  </div>
+</div>
+
+<style>
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+</style>
+
+<script>
+  // Event delegation for celebrate dividers
+  document.getElementById('tableBody').addEventListener('click', e => {
+    const line = e.target.closest('[data-celebrate]');
+    if (!line) return;
+    const type = line.dataset.celebrate;
+    const yr = line.dataset.year;
+    const mode = line.dataset.mode || '';
+
+    const modal = document.getElementById('celebModal');
+    const monthly = parseFloat(document.getElementById('monthlyBill').value) || 0;
+    const install = parseFloat(document.getElementById('installCost').value) || 0;
+    const offset = (parseFloat(document.getElementById('solarOffset').value) || 100) / 100;
+    const annualSaving = monthly * 12 * offset;
+
+    if (type === 'loanpaid') {
+      document.getElementById('celebEmoji').textContent = '🎉';
+      document.getElementById('celebTitle').textContent = 'Loan Paid In Full!';
+      document.getElementById('celebTitle').style.color = '#4FC3F7';
+      document.getElementById('celebSubtitle').textContent = `After ${yr} years of payments, your solar system is completely yours. Every dollar of electricity it generates from here is pure savings — no more loan, no more payments.`;
+      document.getElementById('celebStat').innerHTML = `
+        <span style="color:#4FC3F7;font-weight:700;display:block;margin-bottom:6px;">What this means for you</span>
+        <span style="display:block;">☀️ Your system now generates <strong style="color:#E8EDF5;">${fmt(annualSaving)}/yr</strong> in free electricity</span>
+        <span style="display:block;">💸 That's <strong style="color:#E8EDF5;">${fmt(annualSaving / 12)}/month</strong> back in your pocket</span>
+        <span style="display:block;">📅 You still have <strong style="color:#E8EDF5;">${30 - parseInt(yr)} years</strong> of savings ahead in this 30-yr window</span>
+      `;
+    } else {
+      document.getElementById('celebEmoji').textContent = '💰';
+      document.getElementById('celebTitle').textContent = 'Break-Even Reached!';
+      document.getElementById('celebTitle').style.color = '#81C784';
+      document.getElementById('celebSubtitle').textContent = `Your solar investment has officially paid off on a ${mode} basis. From Year ${yr} onward, every year is net positive — solar is working for you.`;
+      const loanYrs = parseInt(document.getElementById('loanYears').value) || 15;
+      const interest = parseFloat(document.getElementById('interestRate').value) || 0;
+      const annualLoan = calcAnnualPayment(install, interest, loanYrs);
+      const stillInLoan = parseInt(yr) <= loanYrs;
+      const netAnnual = annualSaving - (stillInLoan ? annualLoan : 0);
+      const netLabel = netAnnual >= 0 ? `saving <strong style="color:#81C784;">${fmt(netAnnual)}/yr</strong> net` : `${fmt(Math.abs(netAnnual))}/yr net cost above savings`;
+
+      document.getElementById('celebStat').innerHTML = `
+        <span style="color:#81C784;font-weight:700;display:block;margin-bottom:6px;">What this means for you</span>
+        <span style="display:block;">✅ Total savings have now <strong style="color:#E8EDF5;">outpaced total costs</strong></span>
+        <span style="display:block;">📈 You have <strong style="color:#E8EDF5;">${30 - parseInt(yr)} years</strong> of net-positive returns ahead</span>
+        <span style="display:block;">💡 Solar is offsetting <strong style="color:#E8EDF5;">${fmt(annualSaving)}/yr</strong> in electricity${stillInLoan ? `, ${netLabel} after loan` : ` — loan fully paid`}</span>
+      `;
+    }
+
+    modal.style.display = 'flex';
+    launchConfetti();
+  });
+
+  function closeCelebModal() {
+    document.getElementById('celebModal').style.display = 'none';
+  }
+
+  document.getElementById('celebModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('celebModal')) closeCelebModal();
+  });
+
+  function launchConfetti() {
+    const canvas = document.getElementById('confettiCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const pieces = Array.from({length: 80}, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      w: Math.random() * 8 + 4,
+      h: Math.random() * 4 + 2,
+      r: Math.random() * Math.PI * 2,
+      dr: (Math.random() - 0.5) * 0.2,
+      dy: Math.random() * 3 + 1.5,
+      dx: (Math.random() - 0.5) * 1.5,
+      color: ['#F5A623','#81C784','#4FC3F7','#FFD580','#CE93D8','#fff'][Math.floor(Math.random()*6)]
+    }));
+    let frame;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      pieces.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.r);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.restore();
+        p.y += p.dy;
+        p.x += p.dx;
+        p.r += p.dr;
+        if (p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
+      });
+      frame = requestAnimationFrame(draw);
+    }
+    cancelAnimationFrame(frame);
+    draw();
+    setTimeout(() => cancelAnimationFrame(frame), 4000);
+  }
+</script>
+</body>
+</html>
