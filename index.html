@@ -984,7 +984,7 @@
         ${showB ? `<div class="inflation-cell col-b">${fmt(inflatedCost)} <span class="badge badge-utility">Inflated Util Cost</span></div>` : ''}
         <div class="loan-cell">${isLoanActive ? fmt(loanCost) : '—'}${badge}</div>
         <div class="net-cell ${combinedClass}">${fmt(combinedCost)} <span class="badge ${combinedClass === 'positive' ? 'badge-savings' : 'badge-negative'}">New Payment</span></div>
-        <div class="net-cell diff-cell ${isLoanActive ? diffClass : 'positive'}">${isLoanActive ? diffSign + fmt(Math.abs(diff)) + (diff >= 0 ? ' <span class="badge badge-savings">Savings</span>' : '') : fmt(postLoanSavings) + ' <span class="badge badge-savings">Savings</span>'}</div>
+        <div class="net-cell diff-cell ${isLoanActive ? diffClass : 'positive'}">${isLoanActive ? diffSign + fmt(Math.abs(diff)) + (diff >= 0 ? ' <span class="badge badge-savings">Savings</span>' : '') : '-' + fmt(postLoanSavings) + ' <span class="badge badge-savings">Savings</span>'}</div>
       `;
       body.appendChild(row);
 
